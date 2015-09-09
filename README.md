@@ -35,29 +35,49 @@ MuteScript does not support inheritance. Instead it is intended to only support 
     
 ## Method ##
 
-  (public|private|) [defer] [pure] MethodName([argument[, argument]]) : ReturnType ({ MethodBody }| => expression)
+    (public|private|) [defer] [pure] MethodName([argument[, argument]]) : ReturnType ({ MethodBody }| => expression)
   
 Methods marked `defer` cannot have a method body. These are methods that are considered implemented by the runtime.
 
 Example:
 
-  public pure ToString() : string => "MyToString"
-  public pure ToString() : string { return "MyToString" }
+    public pure ToString() : string => "MyToString"
+    public pure ToString() : string { return "MyToString" }
   
 
 ## Fields ##
 
-  (public|private) (const|mutable|immutable) FieldName (: DataType| <- Expression|: DataType <- Expression)
+    (public|private) (const|mutable|immutable) FieldName (: DataType| <- Expression|: DataType <- Expression)
 
 Note that there is no default values in MuteScript, even for mutable fields. All fields must be assigned.
 
-Example:
+### Examples ###
 
-  public const Length <- 100
-  public immutable Length <- 100
-  public const Length : int <- 100
-  public mutable Length : int
+    public const Length <- 100
+    public immutable Length <- 100
+    public const Length : int <- 100
+    public mutable Length : int
   
 ## Expressions ##
 
-TODO
+### Variable declaration ###
+
+    (mutable|const|immutable) VariableName (: DataType|: DataType <- expression|<- expression)
+
+### Binary operators
+
+|Operator  |Meaning       |Type        |
+|:--------:|:-------------|------------|
+|[] .      |Indexing      |Postfix     |
+|.         |Member access |Binary      |
+|-         |Negate        |Unary       |
+|!         |Invoke        |Binary      |
+|^         |Power         |Binary      |
+|* / %     |Product       |Binary      |
+|+ -       |Sum           |Binary      |
+|& |       |Logical       |Binary      |
+|< > <= >= |Comparison    |Binary      |
+|= <>      |Equality      |Binary      |
+|<-        |Assignment    |Binary      |
+
+The indexing operator has two syntaxes (syntices?): `expression[expression]` and `expression.integer`.
