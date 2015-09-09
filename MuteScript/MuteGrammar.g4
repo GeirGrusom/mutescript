@@ -100,8 +100,7 @@ variableDefExpression:
 
 
 expression:
-	primaryExpression |
-	   memberAccessExpression;
+	 memberAccessExpression | primaryExpression;
 /*	|   indexerExpression
     |   methodCallExpression
 	|   'new' creator
@@ -118,14 +117,14 @@ expression:
     |   expression '?' expression ':' expression
     |   assignmentExpression;*/
 
-memberAccessExpression: indexerExpression operator = '.' ID
+memberAccessExpression: memberAccessExpression operator = '.' memberName = ID
 	| indexerExpression;
 
-indexerExpression: indexerExpression ('[' expression ']' | '.' INT)
+indexerExpression: indexerExpression ('[' expression ']' | '.' constInteger)
 	| methodCallExpression;
 
 methodCallExpression: methodCallExpression operator = '!' expression
-	| assignmentExpression;
+	| powExpression;
 
 powExpression: powExpression operator = '^' expression
 	| multiplicativeExpression;
@@ -170,7 +169,7 @@ fragment EscapeSequence:
 
 
 WS: [ \t]+ -> skip;
-IGNORE: [;] -> skip;
+//IGNORE: [;] -> skip;
 NL: ('\n' | '\r' '\n') -> skip;
 
 MUL_OPERATORS: ('*' | '/' | '%');

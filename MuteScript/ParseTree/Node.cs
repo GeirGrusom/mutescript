@@ -39,6 +39,19 @@ namespace MuteScript.ParseTree
         {
             Source = pos;
         }
+
+        public virtual void ToString(int tab, StringBuilder builder)
+        {
+            builder.Append('\t', tab);
+            builder.Append(ToString());
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            ToString(0, sb);
+            return sb.ToString();
+        }
     }
 
     public class Module : Node
@@ -63,6 +76,22 @@ namespace MuteScript.ParseTree
         }
     }
 
+    public class SymbolExpression : Expression
+    {
+        public Terminal Symbol { get; }
+
+        public SymbolExpression(SourcePositionInfo pos, Terminal symbol)
+            : base(pos, null)
+        {
+            Symbol = symbol;
+        }
+
+        public override string ToString()
+        {
+            return Symbol.ToString();
+        }
+    }
+
     public class Import : Node
     {
         public Node Module { get; }
@@ -72,7 +101,7 @@ namespace MuteScript.ParseTree
             return $"import {Module}";
         }
 
-        public Import(SourcePositionInfo source, string moduleName)
+        public Import(SourcePositionInfo source, Terminal moduleName)
             : base(source)
         {
             Module = new NamedModule(source, moduleName);
@@ -87,9 +116,9 @@ namespace MuteScript.ParseTree
 
     public class NamedModule : Node
     {
-        public string Module { get; }
+        public Terminal Module { get; }
 
-        public NamedModule(SourcePositionInfo source, string name)
+        public NamedModule(SourcePositionInfo source, Terminal name)
             : base(source)
         {
             Module = name;
@@ -97,7 +126,7 @@ namespace MuteScript.ParseTree
 
         public override string ToString()
         {
-            return Module;
+            return Module.ToString();
         }
     }
 
@@ -115,9 +144,19 @@ namespace MuteScript.ParseTree
 
         public ImmutableArray<Node> GenericArguments { get; }
 
-        public override string ToString()
+        public override void ToString(int tab, StringBuilder builder)
         {
-            return $"{Access} {StorageClass} {Name}({DefaultConstructor})\r\n{{ {string.Join("\r\n", Members)} }} ";
+            builder.Append('\t', tab);
+            builder.AppendLine($"{Access} {StorageClass} {Name}({DefaultConstructor})");
+            builder.Append('\t', tab);
+            builder.AppendLine("{");
+            foreach(var item in Members)
+            {
+                item.ToString(tab + 1, builder);
+            }
+            builder.AppendLine();
+            builder.Append('\t', tab);
+            builder.AppendLine("}");
         }
 
         public Class(SourcePositionInfo pos, Terminal access, Terminal storageClass, Terminal name, Tuple defaultConstructor, IEnumerable<Node> members, IEnumerable<Node> genericArguments)
@@ -154,6 +193,11 @@ namespace MuteScript.ParseTree
             Type = type;
             Name = name;
         }
+
+        public override string ToString()
+        {
+            return Name.ToString();
+        }
     }
 
     public class Method : Node
@@ -179,6 +223,39 @@ namespace MuteScript.ParseTree
             GenericArguments = genericArguments.ToImmutableArray();
             Parameters = parameters;
             Body = body;
+        }
+
+        public override void ToString(int tab, StringBuilder builder)
+        {
+            builder.Append('\t', tab);
+            builder.Append(Access);
+            builder.Append(" ");
+            if(Body == null)
+            {
+                builder.Append("defer ");
+            }
+            builder.Append(Name);
+
+            if(GenericArguments.Any())
+            {
+                builder.Append($"<{string.Join(", ", GenericArguments)}>");
+            }
+
+            builder.Append(Parameters);
+
+            if (Body == null)
+                return;
+
+            if(Body is StatementBlock)
+            {
+                builder.AppendLine();
+                Body.ToString(tab + 1, builder);
+            }
+            else
+            {
+                builder.Append($" => {Body}");
+            }
+
         }
     }
 
@@ -235,7 +312,17 @@ namespace MuteScript.ParseTree
             Value = value;
             Index = index;
         }
-        public override string ToString() => $"{Value}[{Index}]";
+        public override string ToString()
+        {
+            if(Index is ConstIntegerExpression)
+            {
+                return $"{Value}.{Index}";
+            }
+            else
+            {
+                return $"{Value}[{Index}]";
+            }
+        }
     }
 
     public class ConstIntegerExpression : Expression
@@ -260,6 +347,51 @@ namespace MuteScript.ParseTree
             Value = value;
         }
         public override string ToString() => Value.ToString();
+    }
+
+    public class MemberExpression : Expression
+    {
+        public Node Member { get; }
+
+        public MemberExpression(SourcePositionInfo pos, Node type, Node member)
+            : base(pos, type)
+        {
+            Member = member;
+        }
+
+        public override string ToString()
+        {
+            return Member.ToString();
+        }
+    }
+
+    public class StatementBlock : Expression
+    {
+        public ImmutableList<Expression> Statements { get; }
+
+        public StatementBlock(SourcePositionInfo pos, Node type, IEnumerable<Expression> statements)
+            : base(pos, type)
+        {
+            Statements = statements.ToImmutableList();
+        }
+
+        public override string ToString()
+        {
+            return $"{{ {string.Join(Environment.NewLine, Statements)} }}";
+        }
+
+        public override void ToString(int tab, StringBuilder builder)
+        {
+            builder.Append('\t', tab - 1);
+            builder.AppendLine("{");
+            foreach(var item in Statements)
+            {
+                item.ToString(tab, builder);
+            }
+            builder.AppendLine();
+            builder.Append('\t', tab - 1);
+            builder.AppendLine("}");
+        }
     }
 
     public class BinaryExpression : Expression

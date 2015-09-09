@@ -231,30 +231,69 @@ namespace MuteScript
             return new Method(context.GetPosition(), access, pure, name, genericArguments, args, body);
         }
 
+        public override Node VisitComparisonExpression([NotNull] MuteGrammarParser.ComparisonExpressionContext context)
+        {
+            var next = context.equivalenceExpression();
+            if (next != null)
+                return VisitEquivalenceExpression(next);
+
+            var left = (Expression)VisitComparisonExpression(context.comparisonExpression());
+            var right = (Expression)VisitExpression(context.expression());
+
+            return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
+        }
+
+        public override Node VisitEquivalenceExpression([NotNull] MuteGrammarParser.EquivalenceExpressionContext context)
+        {
+            var next = context.assignmentExpression();
+            if (next != null)
+                return VisitAssignmentExpression(next);
+
+            var left = (Expression)VisitEquivalenceExpression(context.equivalenceExpression());
+            var right = (Expression)VisitExpression(context.expression());
+
+            return new BinaryExpression(context.GetPosition(), new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "bool"), Enumerable.Empty<Node>()), left, right, context.@operator.GetTerminal());
+        }
+
+        public override Node VisitAssignmentExpression([NotNull] MuteGrammarParser.AssignmentExpressionContext context)
+        {
+            var exp = context.expression();
+            if (exp == null)
+                return VisitPrimaryExpression(context.primaryExpression());
+
+            var left = (Expression)VisitPrimaryExpression(context.primaryExpression());
+
+            var right = (Expression)VisitExpression(context.expression());
+
+            return new BinaryExpression(context.GetPosition(), right.Type, left, right, context.@operator.GetTerminal());
+        }
+
         public override Node VisitAdditiveExpression([NotNull] MuteGrammarParser.AdditiveExpressionContext context)
         {
-            var right = (Expression)Visit(context.comparisonExpression());
+            var next = context.comparisonExpression();
+            if (next != null)
+                return VisitComparisonExpression(next);
 
-            var leftExp = context.additiveExpression();
+            var right = (Expression)VisitExpression(context.expression());
 
-            if (leftExp != null)
-            {
-                var left = (Expression)Visit(leftExp);
+            var left = (Expression)VisitAdditiveExpression(context.additiveExpression());
 
-                return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
-            }
-            return right;
+            return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
         }
 
         public override Node VisitMultiplicativeExpression([NotNull] MuteGrammarParser.MultiplicativeExpressionContext context)
         {
-            var right = (Expression)Visit(context.additiveExpression());
+            var next = context.additiveExpression();
+            if (next != null)
+                return VisitAdditiveExpression(next);
+
+            var right = (Expression)VisitExpression(context.expression());
 
             var leftExp = context.multiplicativeExpression();
 
             if (leftExp != null)
             {
-                var left = (Expression)Visit(leftExp);
+                var left = (Expression)VisitMultiplicativeExpression(leftExp);
 
                 return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
             }
@@ -264,7 +303,16 @@ namespace MuteScript
         public override Node VisitExpression([NotNull] MuteGrammarParser.ExpressionContext context)
         {
             var bin = context.memberAccessExpression();
-            return Visit(bin);
+
+            if(bin != null)
+                return VisitMemberAccessExpression(bin);
+
+            var primary = context.primaryExpression();
+
+            if (primary != null)
+                return VisitPrimaryExpression(primary);
+
+            throw new NotSupportedException();
         }
 
         public override Node VisitConstInteger([NotNull] MuteGrammarParser.ConstIntegerContext context)
@@ -280,31 +328,86 @@ namespace MuteScript
             throw new NotImplementedException();
         }
 
+        public override Node VisitPrimaryExpression([NotNull] MuteGrammarParser.PrimaryExpressionContext context)
+        {
+            var constExp = context.constExpression();
+
+            if (constExp != null)
+                return VisitConstExpression(constExp);
+
+            var variableExp = context.variableExpression();
+
+            if (variableExp != null)
+                return VisitVariableExpression(variableExp);
+
+            return base.VisitPrimaryExpression(context);
+        }
+
+        public override Node VisitVariableExpression([NotNull] MuteGrammarParser.VariableExpressionContext context)
+        {
+            var variableId = context.ID();
+
+            return new SymbolExpression(context.GetPosition(), variableId.GetTerminal());
+        }
+
         public override Node VisitMemberAccessExpression([NotNull] MuteGrammarParser.MemberAccessExpressionContext context)
         {
-            var right = (Expression)Visit(context.ID());
+            var next = context.indexerExpression();
+            if (next != null)
+                return VisitIndexerExpression(next);
+            
+            var id = context.memberName;
+            var term = id.GetTerminal();
 
-            var leftExp = context.indexerExpression();
+            var right = new MemberExpression(term.Source, null, term);
+            var left = (Expression)VisitMemberAccessExpression(context.memberAccessExpression());
 
-            if (leftExp != null)
+            return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
+        }
+
+        public override Node VisitIndexerExpression([NotNull] MuteGrammarParser.IndexerExpressionContext context)
+        {
+            var next = context.methodCallExpression();
+            if (next != null)
+                return VisitMethodCallExpression(next);
+
+            var left = (Expression)VisitIndexerExpression(context.indexerExpression());
+
+            var right = context.expression();
+            if(right != null)
             {
-                var left = (Expression)Visit(leftExp);
-
-                return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
+                return new IndexerExpression(context.GetPosition(), left, (Expression)VisitExpression(right));
             }
-            return right;
-            throw new NotImplementedException();
+
+            return new IndexerExpression(context.GetPosition(), left, (Expression)VisitConstInteger(context.constInteger()));
+        }
+
+        public override Node VisitMethodCallExpression([NotNull] MuteGrammarParser.MethodCallExpressionContext context)
+        {
+            var next = context.powExpression();
+            if (next != null)
+                return VisitPowExpression(next);
+
+            var left = (Expression)VisitMethodCallExpression(context.methodCallExpression());
+
+            var right = (Expression)VisitExpression(context.expression());
+
+            return new BinaryExpression(context.GetPosition(), null, left, right, context.@operator.GetTerminal());
         }
 
         public override Node VisitPowExpression([NotNull] MuteGrammarParser.PowExpressionContext context)
         {
-            var right = (Expression)Visit(context.multiplicativeExpression());
+            var next = context.multiplicativeExpression();
+            if (next != null)
+                return VisitMultiplicativeExpression(next);
+
+            var right = (Expression)VisitExpression(context.expression());
 
             var leftExp = context.powExpression();
 
             if (leftExp != null)
             {
-                var left = (Expression)Visit(leftExp);
+                var left = (Expression)VisitPowExpression(leftExp);
 
                 return new BinaryExpression(context.GetPosition(), left.Type, left, right, context.@operator.GetTerminal());
             }

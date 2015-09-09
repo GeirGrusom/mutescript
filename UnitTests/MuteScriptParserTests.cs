@@ -36,8 +36,8 @@ namespace UnitTests
             var parser = new MuteScriptParser();
             var lexer = new MuteGrammarLexer(new Antlr4.Runtime.AntlrInputStream(code));
             var muteParser = new MuteGrammarParser(new Antlr4.Runtime.UnbufferedTokenStream(lexer));
-            var exp = muteParser.memberAccessExpression();
-            return (Expression)parser.VisitMemberAccessExpression(exp);
+            var exp = muteParser.expression();
+            return (Expression)parser.VisitExpression(exp);
         }
 
         private static Field ParseField(string code)
@@ -119,7 +119,9 @@ namespace UnitTests
         [TestCase("*", "+")]
         public void Operator_HasHigherPresedenceThan_Operator(string opHigh, string opLow)
         {
-            var item = (BinaryExpression)ParseExpression($"12 {opLow} 2 {opHigh} 3");
+            var item = (BinaryExpression)ParseExpression($"abc {opLow} def {opHigh} ghi");
+
+            Console.WriteLine(item.ToString());
 
             Assert.That(item.Operator, Is.EqualTo(opHigh));
             Assert.That(((BinaryExpression)item.Right).Operator, Is.EqualTo(opLow));
@@ -133,9 +135,16 @@ namespace UnitTests
         [TestCase("%")]
         [TestCase(".")]
         [TestCase("!")]
+        [TestCase("<-")]
+        [TestCase(">")]
+        [TestCase("<")]
+        [TestCase(">=")]
+        [TestCase("<=")]
+        [TestCase("=")]
+        [TestCase("<>")]
         public void Operator_ReturnsCorrectType(string op)
         {
-            var item = (BinaryExpression)ParseExpression($"14 {op} 245");
+            var item = (BinaryExpression)ParseExpression($"def {op} abc");
 
 
             Assert.That(item.Operator.Value, Is.EqualTo(op));
@@ -157,7 +166,7 @@ namespace UnitTests
         public void ConstExpression_ReturnsTerminal(string input, Type expectedType)
         {
             var parser = new MuteScriptParser();
-            var lexer = new MuteGrammarLexer(new Antlr4.Runtime.AntlrInputStream("123"));
+            var lexer = new MuteGrammarLexer(new Antlr4.Runtime.AntlrInputStream(input));
             var muteParser = new MuteGrammarParser(new Antlr4.Runtime.UnbufferedTokenStream(lexer));
 
             var result = parser.VisitConstExpression(muteParser.constExpression());
@@ -167,5 +176,14 @@ namespace UnitTests
             
         }
 
+        [Test]
+        public void Foo()
+        {
+            var parser = new MuteScriptParser();
+            var lexer = new MuteGrammarLexer(new Antlr4.Runtime.AntlrInputStream("{ 123 . 456 }"));
+            var muteParser = new MuteGrammarParser(new Antlr4.Runtime.UnbufferedTokenStream(lexer));
+
+            var result = parser.VisitStatementBlock(muteParser.statementBlock());
+        }
     }
 }
