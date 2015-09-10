@@ -114,17 +114,34 @@ namespace UnitTests
         }
 
         [TestCase("!", ".")]
-        [TestCase(".", "^")]
+        [TestCase("^", ".")]
         [TestCase("^", "*")]
         [TestCase("*", "+")]
+        [TestCase(">", "+")]
+        [TestCase("=", ">")]
         public void Operator_HasHigherPresedenceThan_Operator(string opHigh, string opLow)
         {
             var item = (BinaryExpression)ParseExpression($"abc {opLow} def {opHigh} ghi");
 
             Console.WriteLine(item.ToString());
 
-            Assert.That(item.Operator, Is.EqualTo(opHigh));
-            Assert.That(((BinaryExpression)item.Right).Operator, Is.EqualTo(opLow));
+            Assert.That(item.Operator.Value, Is.EqualTo(opHigh));
+            Assert.That(((BinaryExpression)item.Left).Operator.Value, Is.EqualTo(opLow));
+        }
+
+        [TestCase(">")]
+        [TestCase("+")]
+        [TestCase("-")]
+        [TestCase("*")]
+        [TestCase(".")]
+        public void Operator_Assignment_Operator(string op)
+        {
+            var item = (BinaryExpression)ParseExpression($"abc <- def {op} ghi");
+
+            Console.WriteLine(item.ToString());
+
+            Assert.That(item.Operator.Value, Is.EqualTo("<-"));
+            Assert.That(((BinaryExpression)item.Right).Operator.Value, Is.EqualTo(op));
         }
 
         [TestCase("+")]

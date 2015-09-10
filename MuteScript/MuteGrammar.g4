@@ -98,9 +98,7 @@ statementBlock:
 variableDefExpression:
 	storageClass = ('mutable'|'const'|'immutable') name = ID ( ':' dataType '<-' expression | ':' dataType| '<-' expression)?;
 
-
-expression:
-	 memberAccessExpression | primaryExpression;
+expression: assignmentExpression;
 /*	|   indexerExpression
     |   methodCallExpression
 	|   'new' creator
@@ -117,41 +115,80 @@ expression:
     |   expression '?' expression ':' expression
     |   assignmentExpression;*/
 
-memberAccessExpression: memberAccessExpression operator = '.' memberName = ID
-	| indexerExpression;
+unaryExpression
+	: postfixExpression
+	| operator = '-' unaryExpression
+	| operator = 'return' unaryExpression
+	| operator = 'yield' unaryExpression
+	| operator = 'new' typeReference '!' expression
+	;
 
-indexerExpression: indexerExpression ('[' expression ']' | '.' constInteger)
-	| methodCallExpression;
+postfixExpression
+	: primaryExpression
+	| postfixExpression ('[' expression ']' | '.' constInteger)
+	| postfixExpression operator = '.' memberName = ID
+	;
 
-methodCallExpression: methodCallExpression operator = '!' expression
-	| powExpression;
+methodCallExpression: unaryExpression 
+	| methodCallExpression operator = '!' unaryExpression
+	;
 
-powExpression: powExpression operator = '^' expression
-	| multiplicativeExpression;
+powExpression 
+	: multiplicativeExpression
+	| powExpression operator = '^' multiplicativeExpression
+	;
 
-multiplicativeExpression: multiplicativeExpression operator = ('*'|'/'|'%') expression
-	| additiveExpression;
+multiplicativeExpression: additiveExpression
+	| multiplicativeExpression operator = ('*'|'/'|'%') additiveExpression
+	;
 
-additiveExpression: additiveExpression operator = ('+'|'-') expression
-	| comparisonExpression;
+additiveExpression: methodCallExpression
+	| additiveExpression operator = ('+'|'-') methodCallExpression
+	;
 
-comparisonExpression: comparisonExpression operator = ('<=' | '>=' | '>' | '<') expression
-	| equivalenceExpression;
+comparisonExpression: powExpression
+	|	comparisonExpression operator = ('<=' | '>=' | '>' | '<') powExpression
+	;
 
-equivalenceExpression: equivalenceExpression operator = ('=' | '<>') expression
-	| assignmentExpression;
+logicalOrExpression
+	: logicalAndExpression
+	| logicalOrExpression '||' logicalAndExpression
+	;
 
-assignmentExpression: <assoc=right> primaryExpression operator = '<-' expression
-	| primaryExpression;
+logicalAndExpression
+	: equivalenceExpression
+	| logicalAndExpression '&&' equivalenceExpression
+	;
 
-primaryExpression:
-	variableExpression |
-	tupleExpression |
-	constExpression;
+equivalenceExpression
+	: comparisonExpression
+	| equivalenceExpression operator = ('=' | '<>') comparisonExpression
+	;
+
+conditionalExpression
+	: 'if' tupleExpression expression 'else' conditionalExpression
+	;
+
+assignmentExpression
+	: logicalOrExpression	
+	| conditionalExpression
+	| unaryExpression
+	| <assoc=right> unaryExpression operator = '<-' assignmentExpression
+	;
+
+primaryExpression
+	: tupleExpression
+	| CONSTANT
+	| STRING
+	| INT 
+	| ID 
+	;
 
 tupleExpression: '(' (arguments += expression (',' arguments += expression ',')*)? ')';
 
 variableExpression: name = ID;
+
+CONSTANT: 'true' | 'false' | 'null' | 'never' | 'void';
 
 constExpression : constInteger | constString;
 constString: STRING;
@@ -169,7 +206,7 @@ fragment EscapeSequence:
 
 
 WS: [ \t]+ -> skip;
-//IGNORE: [;] -> skip;
+IGNORE: [;] -> skip;
 NL: ('\n' | '\r' '\n') -> skip;
 
 MUL_OPERATORS: ('*' | '/' | '%');

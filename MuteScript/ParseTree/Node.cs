@@ -394,6 +394,55 @@ namespace MuteScript.ParseTree
         }
     }
 
+    public class ConstantExpression : Expression
+    {
+        public Terminal Value { get; }
+
+        public ConstantExpression(SourcePositionInfo pos, Node type, Terminal value)
+            : base(pos, type)
+        {
+            Value = value;
+        }
+    }
+
+    public class ConditionalExpression : Expression
+    {
+        public Expression Condition { get; }
+        public Expression IsTrue { get; }
+        public Expression IsFalse { get; }
+
+        public ConditionalExpression(SourcePositionInfo pos, Node type, Expression condition, Expression isTrue, Expression isFalse)
+            : base(pos, type)
+        {
+            Condition = condition;
+            IsTrue = isTrue;
+            IsFalse = isFalse;
+        }
+
+        public override string ToString()
+        {
+            return $"if {Condition} {IsTrue} else {IsFalse}";
+        }
+    }
+
+    public class UnaryExpression : Expression
+    {
+        public Expression Operand { get; }
+
+        public Terminal Operator { get; }
+
+        public UnaryExpression(SourcePositionInfo pos, Expression operand, Terminal @operator)
+            : base(pos, operand.Type)
+        {
+            Operand = operand;
+            Operator = @operator;
+        }
+
+        public override string ToString()
+        {
+            return $"{Operator}{Operand}";
+        }
+    }
     public class BinaryExpression : Expression
     {
         public Expression Left { get; }
@@ -531,6 +580,14 @@ namespace MuteScript.ParseTree
 
     public class TypeReference : Node
     {
+        public static readonly TypeReference Boolean = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "bool"), Enumerable.Empty<Node>());
+        public static readonly TypeReference Int = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "int"), Enumerable.Empty<Node>());
+        public static readonly TypeReference Float = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "float"), Enumerable.Empty<Node>());
+        public static readonly TypeReference String = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "string"), Enumerable.Empty<Node>());
+        public static readonly TypeReference Void = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "void"), Enumerable.Empty<Node>());
+        public static readonly TypeReference Never = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "never"), Enumerable.Empty<Node>());
+        public static readonly TypeReference Null = new TypeReference(SourcePositionInfo.Empty, null, new Terminal(SourcePositionInfo.Empty, "null"), Enumerable.Empty<Node>());
+
         public Terminal Module { get; }
 
         
