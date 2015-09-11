@@ -129,6 +129,22 @@ namespace UnitTests
             Assert.That(((BinaryExpression)item.Left).Operator.Value, Is.EqualTo(opLow));
         }
 
+        [TestCase("!", ".")]
+        [TestCase("^", ".")]
+        [TestCase("^", "*")]
+        [TestCase("*", "+")]
+        [TestCase(">", "+")]
+        [TestCase("=", ">")]
+        public void Operator_HasHigherPresedenceThan_Operator_Reverse(string opHigh, string opLow)
+        {
+            var item = (BinaryExpression)ParseExpression($"abc {opHigh} def {opLow} ghi");
+
+            Console.WriteLine(item.ToString());
+
+            Assert.That(item.Operator.Value, Is.EqualTo(opHigh));
+            Assert.That(((BinaryExpression)item.Right).Operator.Value, Is.EqualTo(opLow));
+        }
+
         [TestCase(">")]
         [TestCase("+")]
         [TestCase("-")]
@@ -177,6 +193,26 @@ namespace UnitTests
             var result = (ConstIntegerExpression)parser.VisitConstExpression(muteParser.constExpression());
             Assert.That(result?.ToString(), Is.EqualTo("123"));
 
+        }
+
+        [Test]
+        public void TestFoo()
+        {
+            const string input = @"
+module foo
+
+public class bar
+{
+    public meth(const arg : int) : bool => abc <- 100
+}
+";
+
+            var parser = new MuteScriptParser();
+            var lexer = new MuteGrammarLexer(new Antlr4.Runtime.AntlrInputStream(input));
+            var muteParser = new MuteGrammarParser(new Antlr4.Runtime.UnbufferedTokenStream(lexer));
+
+            var cmp = parser.VisitCompileUnit(muteParser.compileUnit());
+            Console.WriteLine(cmp.ToString());
         }
 
         [TestCase("123", typeof(ConstIntegerExpression))]

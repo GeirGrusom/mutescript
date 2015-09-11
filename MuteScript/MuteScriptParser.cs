@@ -150,7 +150,11 @@ namespace MuteScript
 
         public override Node VisitTupleMember([NotNull] MuteGrammarParser.TupleMemberContext context)
         {
-            return new TupleMember(context.GetPosition(), null, context.storageClass.GetTerminal(), context.name.GetTerminal(), Visit(context.dataType()), (ParseTree.Expression)Visit(context.expression()));
+            var e = context.expression();
+
+            Expression exp = e != null ? (Expression)VisitExpression(e) : null;
+
+            return new TupleMember(context.GetPosition(), null, context.storageClass.GetTerminal(), context.name.GetTerminal(), Visit(context.dataType()), exp);
         }
 
 

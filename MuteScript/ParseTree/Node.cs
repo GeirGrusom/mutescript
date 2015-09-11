@@ -62,9 +62,16 @@ namespace MuteScript.ParseTree
 
         public ImmutableArray<Node> Members { get; }
 
-        public override string ToString()
+
+        public override void ToString(int tab, StringBuilder builder)
         {
-            return $"module {Name}";
+            builder.Append('\t', tab);
+            builder.AppendLine($"module {Name}");
+            builder.AppendLine();
+            foreach(var mem in Members)
+            {
+                mem.ToString(tab, builder);
+            }
         }
 
         public Module(SourcePositionInfo pos, string name, IEnumerable<Node> imports, IEnumerable<Node> members)
@@ -147,7 +154,26 @@ namespace MuteScript.ParseTree
         public override void ToString(int tab, StringBuilder builder)
         {
             builder.Append('\t', tab);
-            builder.AppendLine($"{Access} {StorageClass} {Name}({DefaultConstructor})");
+            if(Access != null)
+            {
+                builder.Append(Access);
+                builder.Append(" ");
+            }
+            if(StorageClass != null)
+            {
+                builder.Append(StorageClass);
+                builder.Append(" ");
+            }
+            builder.Append($"class {Name}");
+            if(GenericArguments.Any())
+            {
+                builder.Append($"<{string.Join(", ", GenericArguments)}>");
+            }
+            if(DefaultConstructor !=null)
+            {
+                DefaultConstructor.ToString(0, builder);
+            }
+            builder.AppendLine();
             builder.Append('\t', tab);
             builder.AppendLine("{");
             foreach(var item in Members)
@@ -179,6 +205,11 @@ namespace MuteScript.ParseTree
             : base(pos)
         {
             Name = name;
+        }
+
+        public override string ToString()
+        {
+            return Name.ToString();
         }
     }
 
@@ -403,6 +434,11 @@ namespace MuteScript.ParseTree
         {
             Value = value;
         }
+
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
     }
 
     public class ConditionalExpression : Expression
@@ -511,6 +547,11 @@ namespace MuteScript.ParseTree
         {
             Members = members.ToImmutableArray();
         }
+
+        public override string ToString()
+        {
+            return $"({string.Join(", ", Members)})";
+        }
     }
 
     public class TupleMember : Node
@@ -529,6 +570,24 @@ namespace MuteScript.ParseTree
             Name = name;
             Type = type;
             Expression = expression;
+        }
+
+        public override void ToString(int tab, StringBuilder builder)
+        {
+            if (Access != null)
+            {
+                builder.Append(Access);
+                builder.Append(" ");
+            }
+            builder.Append($"{StorageClass} {Name}");
+            if(Type != null)
+            {
+                builder.Append($" : {Type}");
+            }
+            if(Expression != null)
+            {
+                builder.Append($" <- {Expression}");
+            }
         }
     }
 
